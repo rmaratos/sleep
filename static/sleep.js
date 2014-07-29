@@ -2,6 +2,8 @@ var margin = {top: 20, right:20, bottom: 30, left: 50},
     width = 1000 - margin.left - margin.right,
     height = 500 - margin.top - margin.bottom;
 
+var bisectDate = d3.bisector(function(d) { return d.start; }).left;
+
 var x = d3.time.scale()
     .range([0, width]);
 
@@ -25,6 +27,7 @@ var svg = d3.select("body").append("svg")
     .attr("height", height + margin.top + margin.bottom)
     .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
 var dsv = d3.dsv(";", "text/plain");
 var data;
 
@@ -67,31 +70,57 @@ dsv("static/sleepdata.csv")
             .attr("class", "line")
             .attr("d", line);
 
-        // var columns = Object.keys(rows[0]);
+        var focus = svg.append("g")
+            .attr("class", "focus")
+            .style("display", "none");
 
-        // var table = d3.select("body").append("table").attr("border", "1px solid black").attr("cellpadding","2").style("border-collapse", "collapse"),
-        //     thead = table.append("thead"),
-        //     tbody = table.append("tbody");
+        focus.append("circle")
+            .attr("r", 4.5);
 
-        // thead.append("tr")
-        //     .selectAll("th")
-        //     .data(columns)
-        //     .enter()
-        //     .append("th")
-        //         .text(function(column) { return column; });
+        svg.append("rect")
+            .attr("class", "overlay")
+            .attr("width", width)
+            .attr("height", height)
+            .on("mouseover", function() { focus.style("display", null); })
+            .on("mouseout", function() { focus.style("display", "none"); })
+            .on("mousemove", mousemove);
 
-        // var rows = tbody.selectAll("tr")
-        //     .data(data)
-        //     .enter()
-        //     .append("tr");
+        function mousemove() {
+            var x0 = x.invert(d3.mouse(this)[0]),
+                i = bisectDate(data, x0, 1),
+                d0 = data[i - 1],
+                d1 = data[i],
+                d = x0 - d0.date > d1.date - x0 ? d1 : d0;
+            focus.attr('transform', "translate(" + x(d.start) + "," + y(d.quality) + ")");
+            focus.select("text").text(d.quality);
+        }
 
-        // var cells = rows.selectAll("td")
-        //     .data(function(row) {
-        //         return columns.map(function(column) {
-        //             return {column: column, value: row[column]};
-        //         });
-        //     })
-        //     .enter()
-        //     .append("td")
-        //         .text(function(d) {return d.value; });
+
+        var columns = Object.keys(rows[0]);
+
+        var table = d3.select("body").append("table").attr("border", "1px solid black").attr("cellpadding","2").style("border-collapse", "collapse"),
+            thead = table.append("thead"),
+            tbody = table.append("tbody");
+
+        thead.append("tr")
+            .selectAll("th")
+            .data(columns)
+            .enter()
+            .append("th")
+                .text(function(column) { return column; });
+
+        var rows = tbody.selectAll("tr")
+            .data(data)
+            .enter()
+            .append("tr");
+
+        var cells = rows.selectAll("td")
+            .data(function(row) {
+                return columns.map(function(column) {
+                    return {column: column, value: row[column]};
+                });
+            })
+            .enter()
+            .append("td")
+                .text(function(d) {return d.value; });
     });

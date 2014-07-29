@@ -13,6 +13,16 @@ body {
     display: none;
 }
 
+.overlay {
+    fill: none;
+    pointer-events: all;
+}
+
+.focus circle {
+    fill: none;
+    stroke: steelblue;
+}
+
 .line {
     fill: none;
     stroke: steelblue;
