@@ -10,6 +10,9 @@ var x = d3.time.scale()
 var y = d3.scale.linear()
     .range([height, 0]);
 
+var y2 = d3.scale.linear()
+    .range([height, 0]);
+
 var xAxis = d3.svg.axis()
     .scale(x)
     .orient("bottom");
@@ -18,11 +21,26 @@ var yAxis = d3.svg.axis()
     .scale(y)
     .orient("left");
 
+var yAxis2 = d3.svg.axis()
+    .scale(y2)
+    .orient("left");
+
 var line = d3.svg.line()
     .x(function(d) { return x(d.start); })
     .y(function(d) { return y(d.quality); });
 
+var line2 = d3.svg.line()
+    .x(function(d) { return x(d.start); })
+    .y(function(d) { return y2(d.duration); });
+
 var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+var svg2 = d3.select("body").append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
     .append("g")
@@ -31,24 +49,35 @@ var svg = d3.select("body").append("svg")
 var dsv = d3.dsv(";", "text/plain");
 var data;
 
+function parseDuration(s) {
+    var split = s.split(":");
+    return parseInt(split[0])*60 + parseInt(split[1]);
+}
+
 dsv("static/sleepdata.csv")
     .row(function(d) {
     return (d.Start) ? {
         start: new Date(d.Start),
         end: new Date(d.End),
         quality: parseInt(d["Sleep quality"]),
-        duration: d["Time in bed"],
+        duration: parseDuration(d["Time in bed"]),
         feeling: d["Wake up"]
     } : null;
 
 })
     .get(function(error, rows) {
         data = rows.filter( function(d) { return d !== null; });
-        //console.log(data);
+
         x.domain(d3.extent(data, function(d) { return d.start; }));
         y.domain(d3.extent(data, function(d) { return d.quality; }));
+        y2.domain(d3.extent(data, function(d) { return d.duration; }));
 
         svg.append("g")
+            .attr("class", "x axis")
+            .attr("transform", "translate(0," + height + ")")
+            .call(xAxis);
+
+        svg2.append("g")
             .attr("class", "x axis")
             .attr("transform", "translate(0," + height + ")")
             .call(xAxis);
@@ -63,12 +92,26 @@ dsv("static/sleepdata.csv")
             .style("text-anchor", "end")
             .text("Quality");
 
-        console.log(data);
+        svg2.append("g")
+            .attr("class", "y axis")
+            .call(yAxis2)
+            .append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", 6)
+            .attr("d7", ".71em")
+            .style("text-anchor", "end")
+            .text("Duration (minutes)");
+
 
         svg.append("path")
             .datum(data)
             .attr("class", "line")
             .attr("d", line);
+
+        svg2.append("path")
+            .datum(data)
+            .attr("class", "line")
+            .attr("d", line2);
 
         var focus = svg.append("g")
             .attr("class", "focus")
@@ -92,7 +135,8 @@ dsv("static/sleepdata.csv")
                 d1 = data[i],
                 d = x0 - d0.date > d1.date - x0 ? d1 : d0;
             focus.attr('transform', "translate(" + x(d.start) + "," + y(d.quality) + ")");
-            focus.select("text").text(d.quality);
+            label = "" + d.quality;
+            focus.select("text").text(label);
         }
 
 
